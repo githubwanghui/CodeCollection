@@ -1,0 +1,69 @@
+FIXED FixedFromDouble(int d)
+{
+    long l;
+    l = (long)(d * 65536L);
+    return *(FIXED *)&l;
+}
+
+void SetMat(MAT2* lpMat)
+{
+    lpMat->eM11 = FixedFromDouble(1);
+    lpMat->eM12 = FixedFromDouble(0);
+    lpMat->eM21 = FixedFromDouble(0);
+    lpMat->eM22 = FixedFromDouble(1);
+}
+
+void GetGlyphOutlineTest(HWND hWnd)
+{
+    CFont font = RCWindowUtil::CreateDefaultFont(0);
+    HDC hdc = ::GetDC(hWnd);//::CreateCompatibleDC(NULL);
+    HGDIOBJ hOldFont = ::SelectObject(hdc, font.m_hFont);
+    
+    MAT2 mat2;
+    SetMat(&mat2);
+    GLYPHMETRICS gm;
+
+    TCHAR chText = _T('Íô');
+    int32_t dwNeedSize = GetGlyphOutline(hdc, chText, GGO_BITMAP, &gm, 0, NULL, &mat2);
+    if (dwNeedSize <= 0)
+    {
+        ::SelectObject(hdc, hOldFont);
+        ::ReleaseDC(hWnd, hdc);
+        return;
+    }
+
+    LPBYTE lpBuf = (LPBYTE)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, dwNeedSize);
+    if (lpBuf == NULL)
+    {
+        ::SelectObject(hdc, hOldFont);
+        ::ReleaseDC(hWnd, hdc);
+        return;
+    }
+
+    GetGlyphOutline(hdc, chText, GGO_BITMAP, &gm, dwNeedSize, lpBuf, &mat2);
+    ::SelectObject(hdc, hOldFont);
+    ::ReleaseDC(hWnd, hdc);
+    int nByteCount = ((gm.gmBlackBoxX + 31) >> 5) << 2;
+    for(int i = 0; i < gm.gmBlackBoxY; i++)
+    {
+        for (int j = 0; j < nByteCount; j++)
+        {
+            BYTE btCode = lpBuf[i* nByteCount + j];
+
+            for (int k = 0; k < 8; k++)
+            {
+                if (btCode & (0x80 >> k))
+                {
+                    OutputDebugString(_T("*"));
+                }
+                else
+                {
+                    OutputDebugString(_T(" "));
+                }
+            }
+        }
+        OutputDebugString(_T("\r\n"));
+    }
+    HeapFree(GetProcessHeap(), 0, lpBuf);
+    
+}
