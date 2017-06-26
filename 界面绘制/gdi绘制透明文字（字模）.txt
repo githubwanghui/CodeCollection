@@ -13,10 +13,21 @@ void SetMat(MAT2* lpMat)
     lpMat->eM22 = FixedFromDouble(1);
 }
 
-void GetGlyphOutlineTest(HWND hWnd)
+void GetGlyphOutlineTest()
 {
-    CFont font = RCWindowUtil::CreateDefaultFont(0);
-    HDC hdc = ::GetDC(hWnd);//::CreateCompatibleDC(NULL);
+    NONCLIENTMETRICS ncm = { 0 };
+    ncm.cbSize = sizeof(NONCLIENTMETRICS);
+    BOOL ret = ::SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sizeof(ncm), &ncm, 0);
+
+    HFONT hFont = NULL;
+    if (!ret)
+    {
+        return;
+    }
+       
+    CFont font = ::CreateFontIndirect(&ncm.lfMenuFont);
+
+    HDC hdc = ::CreateCompatibleDC(NULL);
     HGDIOBJ hOldFont = ::SelectObject(hdc, font.m_hFont);
     
     MAT2 mat2;
@@ -28,7 +39,7 @@ void GetGlyphOutlineTest(HWND hWnd)
     if (dwNeedSize <= 0)
     {
         ::SelectObject(hdc, hOldFont);
-        ::ReleaseDC(hWnd, hdc);
+        ::DeleteDC(hdc);
         return;
     }
 
@@ -36,13 +47,13 @@ void GetGlyphOutlineTest(HWND hWnd)
     if (lpBuf == NULL)
     {
         ::SelectObject(hdc, hOldFont);
-        ::ReleaseDC(hWnd, hdc);
+        ::DeleteDC(hdc);
         return;
     }
 
     GetGlyphOutline(hdc, chText, GGO_BITMAP, &gm, dwNeedSize, lpBuf, &mat2);
     ::SelectObject(hdc, hOldFont);
-    ::ReleaseDC(hWnd, hdc);
+    ::DeleteDC(hdc);
     int nByteCount = ((gm.gmBlackBoxX + 31) >> 5) << 2;
     for(int i = 0; i < gm.gmBlackBoxY; i++)
     {
